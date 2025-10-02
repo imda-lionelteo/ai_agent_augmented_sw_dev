@@ -1,0 +1,859 @@
+{
+  "epics": [
+    {
+      "epic_id": "Epic 1",
+      "name": "User Authentication and Onboarding",
+      "description": "Implement secure account creation, login, and password recovery to onboard users safely and efficiently.",
+      "key_objectives": [
+        "Provide secure, standards-based authentication",
+        "Reduce friction in onboarding while maintaining security",
+        "Enable account recovery flows",
+        "Establish auditability and compliance for auth events"
+      ],
+      "stories": [
+        {
+          "story_id": "US-R01",
+          "name": "Email/password sign-up with email verification",
+          "description": "As a visitor, I want to sign up with my email and a password, so that I can create an account and access the application.",
+          "acceptance_criteria": [
+            "User can register with email and password that meets policy (min length, complexity)",
+            "Verification email is sent with a time-limited token; account remains unverified until confirmed",
+            "Attempting to log in with unverified email prompts resending verification",
+            "All validation and error states are shown inline and logged; rate limiting prevents abuse"
+          ],
+          "technical_notes": [
+            "Use OpenID Connect-compatible auth service with username/password grant via backend",
+            "Hash passwords using Argon2id with per-user salt; enforce strong password policy",
+            "Store email verification tokens with TTL; single-use; rotate on resend",
+            "Implement CAPTCHA after configurable failed attempts; add IP/device fingerprinting for rate limits"
+          ],
+          "dependencies": [],
+          "effort": "M",
+          "tasks": [
+            {
+              "task_id": "US-TASK-001",
+              "summary": "Design sign-up flow and validation states",
+              "description": "Produce UX flows, forms, error states, and email verification UX.",
+              "acceptance_criteria": [
+                "Figma screens approved",
+                "Edge cases covered (resend, expired token, invalid link)"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-002",
+              "summary": "Backend: Sign-up API and email verification",
+              "description": "Implement POST /auth/signup, POST /auth/verify-email, token storage, and email service integration.",
+              "acceptance_criteria": [
+                "Unit/integration tests >= 80%",
+                "Verification token TTL and single-use enforced"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-003",
+              "summary": "Frontend: Sign-up form and verification screens",
+              "description": "Build form with validation, success, error, and verification-confirmed screens.",
+              "acceptance_criteria": [
+                "Client-side validation mirrors server rules",
+                "Accessible form semantics (WCAG AA)"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "story_id": "US-R02",
+          "name": "Secure login with session management",
+          "description": "As a registered user, I want to log in securely so that I can access my account and remain signed in within a safe session.",
+          "acceptance_criteria": [
+            "Successful login sets httpOnly, sameSite=strict session cookie",
+            "Account lockout or step-up challenge after repeated failed attempts",
+            "Logout clears session cookie and server-side session",
+            "Device/session list viewable; invalidating session revokes cookie"
+          ],
+          "technical_notes": [
+            "Use short-lived session with server-side store + CSRF protection for state-changing requests",
+            "Support optional 2FA extension point",
+            "Instrument audit logs for login success/failure and logout",
+            "Implement secure cookie flags; rotate session ID post-auth"
+          ],
+          "dependencies": [
+            "US-R01"
+          ],
+          "effort": "M",
+          "tasks": [
+            {
+              "task_id": "US-TASK-004",
+              "summary": "Backend: Login/logout endpoints and session store",
+              "description": "Implement POST /auth/login, POST /auth/logout, session rotation, lockout policy.",
+              "acceptance_criteria": [
+                "Session fixation prevented",
+                "Brute-force mitigations active and configurable"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-005",
+              "summary": "Frontend: Login form and error handling",
+              "description": "Build login UI with clear errors, remember-me (session length), and logout control.",
+              "acceptance_criteria": [
+                "Accessible form and focus management",
+                "Error states localized"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-006",
+              "summary": "QA: Auth flow test plan",
+              "description": "Create and execute test plan for login/logout, lockout, and session expiration.",
+              "acceptance_criteria": [
+                "Test report with pass/fail and defects logged"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "story_id": "US-R03",
+          "name": "Password reset via email",
+          "description": "As a user who forgot my password, I want to reset it via a secure link so that I can regain access to my account.",
+          "acceptance_criteria": [
+            "User can request reset; rate-limited and user enumeration-safe",
+            "Email contains time-limited, single-use reset token",
+            "Reset enforces new password policy and terminates all active sessions",
+            "All actions audited"
+          ],
+          "technical_notes": [
+            "Do not reveal account existence; generic success response",
+            "Store reset token hashes only; invalidate after use/expiry",
+            "Terminate sessions on password change",
+            "Support configurable token TTL (e.g., 30 minutes)"
+          ],
+          "dependencies": [
+            "US-R01",
+            "US-R02"
+          ],
+          "effort": "S",
+          "tasks": [
+            {
+              "task_id": "US-TASK-007",
+              "summary": "Backend: Password reset request/confirm",
+              "description": "Implement POST /auth/reset-request and POST /auth/reset-confirm with token hashing.",
+              "acceptance_criteria": [
+                "Enumeration-safe responses",
+                "Token single-use verified"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-008",
+              "summary": "Frontend: Reset request and new password screens",
+              "description": "Build forms and success/error states for reset flow.",
+              "acceptance_criteria": [
+                "Keyboard-only and screen-reader accessible",
+                "Client validation mirrors server rules"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-009",
+              "summary": "QA: Security tests for reset flow",
+              "description": "Test token expiry, reuse, and session invalidation scenarios.",
+              "acceptance_criteria": [
+                "Documented test results; no critical vulns open"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "epic_id": "Epic 2",
+      "name": "User Profile and Preferences",
+      "description": "Enable users to manage personal information, privacy settings, and notification preferences.",
+      "key_objectives": [
+        "Allow self-service management of profile data",
+        "Provide granular notification preferences",
+        "Support privacy controls and account lifecycle operations",
+        "Ensure compliance with data protection regulations"
+      ],
+      "stories": [
+        {
+          "story_id": "US-R04",
+          "name": "Edit profile and avatar",
+          "description": "As a user, I want to view and edit my profile details and avatar so that my account information stays current.",
+          "acceptance_criteria": [
+            "User can update name, display name, and avatar",
+            "Avatar uploads are validated and stored; old files cleaned up",
+            "Audit trail of changes available to user"
+          ],
+          "technical_notes": [
+            "Use pre-signed URLs for uploads to object storage",
+            "Image processing service for resize/crop; enforce max dimensions/size",
+            "Track change history with created_by/updated_at metadata"
+          ],
+          "dependencies": [
+            "US-R02"
+          ],
+          "effort": "S",
+          "tasks": [
+            {
+              "task_id": "US-TASK-010",
+              "summary": "Backend: Profile read/update and avatar upload",
+              "description": "Endpoints for GET/PUT /me and avatar upload URL issuance.",
+              "acceptance_criteria": [
+                "Validation and size limits enforced",
+                "Unit tests added"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-011",
+              "summary": "Frontend: Profile page and avatar editor",
+              "description": "Build profile UI with avatar cropper and optimistic updates.",
+              "acceptance_criteria": [
+                "Graceful fallback for upload failures",
+                "Accessible controls"
+              ],
+              "priority": "Low",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-012",
+              "summary": "QA: Profile update regression tests",
+              "description": "Cover validation, upload, and audit history display.",
+              "acceptance_criteria": [
+                "Automated E2E tests added"
+              ],
+              "priority": "Low",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "story_id": "US-R05",
+          "name": "Notification preferences",
+          "description": "As a user, I want to manage which notifications I receive and how, so that I only get relevant updates.",
+          "acceptance_criteria": [
+            "User can enable/disable categories (product, billing, security) and channels (email, in-app)",
+            "Default preferences applied for new users; changes persist",
+            "System respects preferences when sending notifications"
+          ],
+          "technical_notes": [
+            "Design preference model with category + channel matrix",
+            "Provide GET/PUT /me/preferences; integrate with notification service",
+            "Seed defaults via migration; expose admin overrides with audit"
+          ],
+          "dependencies": [
+            "US-R02"
+          ],
+          "effort": "M",
+          "tasks": [
+            {
+              "task_id": "US-TASK-013",
+              "summary": "Backend: Preferences model and APIs",
+              "description": "Implement storage schema and endpoints for reading/writing preferences.",
+              "acceptance_criteria": [
+                "Backfill defaults for existing users",
+                "Unit/integration tests added"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-014",
+              "summary": "Frontend: Preferences UI",
+              "description": "Build toggles per category/channel with descriptions.",
+              "acceptance_criteria": [
+                "State persists and reflects server",
+                "Accessible and keyboard navigable"
+              ],
+              "priority": "Low",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-015",
+              "summary": "Integration: Notification service respects prefs",
+              "description": "Update notification pipeline to check and honor user preferences.",
+              "acceptance_criteria": [
+                "No sends when disabled",
+                "Metrics on drops vs sends"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "story_id": "US-R06",
+          "name": "Account deactivation and deletion (GDPR)",
+          "description": "As a user, I want to deactivate or delete my account so that I can control my data and privacy.",
+          "acceptance_criteria": [
+            "User can deactivate to suspend access without data deletion",
+            "User can request deletion with confirmation and grace period",
+            "PII is deleted or anonymized upon deletion; exports available before finalization",
+            "System logs and admin view for compliance"
+          ],
+          "technical_notes": [
+            "Implement soft-deactivate flag with login block",
+            "Deletion pipeline with data map and anonymization rules",
+            "Export data as machine-readable archive (JSON/CSV)",
+            "Legal hold capability to pause deletion when required"
+          ],
+          "dependencies": [
+            "US-R02"
+          ],
+          "effort": "L",
+          "tasks": [
+            {
+              "task_id": "US-TASK-016",
+              "summary": "Backend: Deactivate/delete flows and data pipeline",
+              "description": "Implement endpoints and background jobs for deletion and export.",
+              "acceptance_criteria": [
+                "Data map documented",
+                "Anonymization rules tested"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-017",
+              "summary": "Frontend: Account settings for deactivation/deletion",
+              "description": "UI for initiating deactivation/deletion with confirmations and disclosures.",
+              "acceptance_criteria": [
+                "Explicit confirmations required",
+                "Export available prior to deletion"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-018",
+              "summary": "Compliance review and audit logging",
+              "description": "Ensure flows meet GDPR/CCPA; add immutable audit logs.",
+              "acceptance_criteria": [
+                "Compliance checklist signed",
+                "Audit events queryable"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "epic_id": "Epic 3",
+      "name": "Search and Content Discovery",
+      "description": "Provide powerful search and discovery features to help users find relevant content quickly.",
+      "key_objectives": [
+        "Deliver fast, relevant search results",
+        "Support filtering and sorting for precision",
+        "Enable saved searches and favorites to improve retention",
+        "Ensure performance at scale"
+      ],
+      "stories": [
+        {
+          "story_id": "US-R07",
+          "name": "Keyword search with filters and sorting",
+          "description": "As a user, I want to search by keywords with filters and sorting so that I can find relevant content quickly.",
+          "acceptance_criteria": [
+            "Search box accepts free text; debounced queries",
+            "Filters by type, date range, and tags; multi-select supported",
+            "Sorting by relevance, recency, and popularity",
+            "Empty/error states handled gracefully"
+          ],
+          "technical_notes": [
+            "Back search with indexed engine (e.g., Elasticsearch)",
+            "Define analyzers, stemming, and synonyms",
+            "Paginate via from/size or search_after for deep pagination",
+            "Capture query metrics and click-through for relevance tuning"
+          ],
+          "dependencies": [],
+          "effort": "L",
+          "tasks": [
+            {
+              "task_id": "US-TASK-019",
+              "summary": "Backend: Search index and query APIs",
+              "description": "Design mappings, build indexing pipeline, implement /search endpoint.",
+              "acceptance_criteria": [
+                "p95 latency < 300ms for common queries",
+                "Relevance baseline established"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-020",
+              "summary": "Frontend: Search UI with filters/sorts",
+              "description": "Implement search bar, filters, sorts, and result list with loading states.",
+              "acceptance_criteria": [
+                "Accessible controls",
+                "Deep-linkable query params"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-021",
+              "summary": "Relevance and performance tuning",
+              "description": "Add analyzers, synonyms, caching; measure and tune p95/p99.",
+              "acceptance_criteria": [
+                "Relevance improvements documented",
+                "Latency targets met"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "story_id": "US-R08",
+          "name": "Saved searches and alerts",
+          "description": "As a user, I want to save my searches and optionally receive alerts so that I can track new results automatically.",
+          "acceptance_criteria": [
+            "User can save current query and filters",
+            "User can enable alerts with frequency (daily/weekly)",
+            "Alert emails include top results and link to full list",
+            "User can manage and delete saved searches"
+          ],
+          "technical_notes": [
+            "Persist compact query DSL blob for reproducibility",
+            "Scheduled job evaluates delta results since last run",
+            "Integrate with notification preferences and unsubscribe links",
+            "Rate-limit alerts per user"
+          ],
+          "dependencies": [
+            "US-R05",
+            "US-R07"
+          ],
+          "effort": "M",
+          "tasks": [
+            {
+              "task_id": "US-TASK-022",
+              "summary": "Backend: Saved search model and alert scheduler",
+              "description": "Store saved queries; implement scheduler and diff logic.",
+              "acceptance_criteria": [
+                "Idempotent scheduling",
+                "Scalable for large user counts"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-023",
+              "summary": "Frontend: Save/search management UI",
+              "description": "Add save button, list of saved searches, and alert toggles.",
+              "acceptance_criteria": [
+                "UI reflects server state",
+                "Accessible and responsive"
+              ],
+              "priority": "Low",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-024",
+              "summary": "Email templates for alerts",
+              "description": "Design and implement alert email templates with top results.",
+              "acceptance_criteria": [
+                "Mobile-friendly",
+                "Unsubscribe link present"
+              ],
+              "priority": "Low",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "story_id": "US-R09",
+          "name": "Collections and favorites",
+          "description": "As a user, I want to favorite items and group them into collections so that I can organize and revisit content easily.",
+          "acceptance_criteria": [
+            "Users can favorite/unfavorite items",
+            "Create, rename, and delete collections",
+            "Add/remove items to/from collections",
+            "Favorites and collections sync across devices"
+          ],
+          "technical_notes": [
+            "Use many-to-many join tables with unique constraints",
+            "Provide optimistic UI updates with server reconciliation",
+            "Expose share link capability stub for future collaboration"
+          ],
+          "dependencies": [
+            "US-R02"
+          ],
+          "effort": "S",
+          "tasks": [
+            {
+              "task_id": "US-TASK-025",
+              "summary": "Backend: Favorites and collections APIs",
+              "description": "Implement endpoints and DB schema for favorites and collections.",
+              "acceptance_criteria": [
+                "Race conditions handled",
+                "Unit tests for constraints"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-026",
+              "summary": "Frontend: Favorites and collections UI",
+              "description": "Add favorite toggles and collection manager UI.",
+              "acceptance_criteria": [
+                "Optimistic updates with rollback",
+                "Accessible controls"
+              ],
+              "priority": "Low",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-027",
+              "summary": "QA: Sync and conflict scenarios",
+              "description": "Test cross-device consistency and conflict handling.",
+              "acceptance_criteria": [
+                "E2E tests cover add/remove/rename flows"
+              ],
+              "priority": "Low",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "epic_id": "Epic 4",
+      "name": "Payments and Subscription Management",
+      "description": "Integrate payments to enable subscription purchase, billing history, and plan changes.",
+      "key_objectives": [
+        "Support secure payment method storage",
+        "Enable subscription purchase and management",
+        "Provide transparent billing and invoices",
+        "Handle plan changes with proration and refunds"
+      ],
+      "stories": [
+        {
+          "story_id": "US-R10",
+          "name": "Add payment method and purchase subscription",
+          "description": "As a user, I want to add a payment method and purchase a subscription so that I can unlock premium features.",
+          "acceptance_criteria": [
+            "User can add a card via PCI-compliant flow",
+            "User can select a plan and complete checkout",
+            "On success, subscription activated and receipt sent",
+            "Failures show clear recovery steps"
+          ],
+          "technical_notes": [
+            "Use PSP with tokenization (e.g., Stripe) via client-side elements",
+            "Do not touch raw card data; store only token and last4/brand/exp",
+            "Idempotent webhook handling for payment events",
+            "Feature flags gate premium features post-activation"
+          ],
+          "dependencies": [
+            "US-R02"
+          ],
+          "effort": "L",
+          "tasks": [
+            {
+              "task_id": "US-TASK-028",
+              "summary": "Backend: Checkout and webhook handlers",
+              "description": "Implement checkout session creation and webhook processing for payment intents/subscriptions.",
+              "acceptance_criteria": [
+                "Idempotency keys used",
+                "Webhook retries handled safely"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-029",
+              "summary": "Frontend: Payment method and checkout UI",
+              "description": "Integrate PSP elements for card entry; plan selection and confirmation screens.",
+              "acceptance_criteria": [
+                "Validation errors surfaced",
+                "Loading/error states covered"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-030",
+              "summary": "QA: Payment flows and failure modes",
+              "description": "Test success, decline, 3DS challenges, and webhook delays.",
+              "acceptance_criteria": [
+                "Test matrix executed; defects tracked"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "story_id": "US-R11",
+          "name": "Billing history and invoices",
+          "description": "As a subscriber, I want to view my billing history and invoices so that I can keep track of charges.",
+          "acceptance_criteria": [
+            "List of past invoices with status and amounts",
+            "Users can download invoice PDFs",
+            "Refunds/credits are reflected accurately",
+            "Data loads quickly and is paginated"
+          ],
+          "technical_notes": [
+            "Sync invoice data from PSP or fetch on demand",
+            "Secure per-user access checks",
+            "Cache recent invoices; lazy-load older data",
+            "Ensure tax fields are shown as provided by PSP"
+          ],
+          "dependencies": [
+            "US-R10"
+          ],
+          "effort": "M",
+          "tasks": [
+            {
+              "task_id": "US-TASK-031",
+              "summary": "Backend: Billing history API",
+              "description": "Expose endpoint to fetch invoices securely; integrate with PSP APIs.",
+              "acceptance_criteria": [
+                "Pagination and caching implemented",
+                "Access control verified"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-032",
+              "summary": "Frontend: Billing history UI",
+              "description": "Build billing page with invoice list and PDF download links.",
+              "acceptance_criteria": [
+                "Accessible table and pagination",
+                "Error/empty states handled"
+              ],
+              "priority": "Low",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-033",
+              "summary": "QA: Data reconciliation tests",
+              "description": "Validate amounts and statuses match PSP; test access controls.",
+              "acceptance_criteria": [
+                "Discrepancies documented/resolved"
+              ],
+              "priority": "Low",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "story_id": "US-R12",
+          "name": "Upgrade, downgrade, and cancel with proration",
+          "description": "As a subscriber, I want to change or cancel my plan with clear proration so that billing is fair and predictable.",
+          "acceptance_criteria": [
+            "User can change plans immediately or at period end",
+            "Proration amounts previewed before confirmation",
+            "Cancelation shows final access date; grace period observed",
+            "Emails confirm changes with details"
+          ],
+          "technical_notes": [
+            "Leverage PSP proration APIs to compute previews",
+            "Handle seat/quantity changes where applicable",
+            "Ensure feature entitlements update atomically with billing state",
+            "Track change history for support"
+          ],
+          "dependencies": [
+            "US-R10"
+          ],
+          "effort": "M",
+          "tasks": [
+            {
+              "task_id": "US-TASK-034",
+              "summary": "Backend: Plan change APIs with proration preview",
+              "description": "Implement preview and commit endpoints for plan changes and cancelation.",
+              "acceptance_criteria": [
+                "Accurate proration previews",
+                "Atomic entitlement updates"
+              ],
+              "priority": "High",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-035",
+              "summary": "Frontend: Manage subscription UI",
+              "description": "Build UI to change/cancel plans with preview and confirmations.",
+              "acceptance_criteria": [
+                "Clear pricing and proration details",
+                "Accessible flows"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            },
+            {
+              "task_id": "US-TASK-036",
+              "summary": "QA: Plan changes and proration scenarios",
+              "description": "Test upgrade/downgrade/cancel flows including edge cases.",
+              "acceptance_criteria": [
+                "Coverage of immediate and period-end changes",
+                "No billing inaccuracies detected"
+              ],
+              "priority": "Medium",
+              "status": "To Do",
+              "assignee": "Unassigned",
+              "reporter": "requirements_agent",
+              "created": "2025-09-30T00:00:00Z",
+              "updated": "2025-09-30T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
